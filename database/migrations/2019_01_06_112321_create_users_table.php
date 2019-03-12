@@ -35,6 +35,7 @@ class CreateUsersTable extends Migration
         Schema::dropIfExists('groceries');
         Schema::dropIfExists('nogos');
         Schema::dropIfExists('user_diet');
+        Schema::dropIfExists('user_days');
         Schema::dropIfExists('users');
     }
 }

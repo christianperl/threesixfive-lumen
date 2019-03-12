@@ -2,10 +2,12 @@
 
 namespace App;
 
+use App\Traits\CacheTrait;
 use Fatsecret;
 
 class Ingredient
 {
+    use CacheTrait;
 
     private $id;
 
@@ -26,9 +28,9 @@ class Ingredient
         $this->units = $ingredient['number_of_units'];
         $this->measurement = $ingredient['measurement_description'];
 
-        $fat = FatSecret::getIngredient($this->id)['food'];
+        $fat = $this->cacheIngredient($this->id);
 
-        $this->sub_categories = $fat['food_sub_categories']['food_sub_category'];
+        $this->sub_categories = (isset($fat['food_sub_categories'])) ? $fat['food_sub_categories']['food_sub_category'] : [];
 
         $this->servings = isset(($serv = $fat['servings']['serving'])['serving_id']) ? [$serv] : $serv;
     }

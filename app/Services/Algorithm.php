@@ -7,6 +7,7 @@ use App\Category;
 use App\Diet;
 use App\Nogo;
 use App\Recipe;
+use App\Traits\CacheTrait;
 use App\UserDiet;
 use Fatsecret;
 use Carbon\Carbon;
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\DB;
 
 class Algorithm
 {
+    use CacheTrait;
+
     private $recipe_types;
     private $diets;
     private $allergens;
@@ -76,11 +79,16 @@ class Algorithm
     public function generateWeek()
     {
         $weekPlan = null;
+        $visitedPages = [];
+        $possibleRecipes = [];
 
         foreach ($this->recipe_types as $recipe_type) {
             for ($i = 0, $num = 0, $new_page = true; $i < sizeof($recipe_type['days']); $i++, $num++) {
                 if ($new_page) {
-                    $current_page = rand(1, (int)$recipe_type['totalResults'] / 50);
+                    do {
+                        $current_page = rand(1, (int)$recipe_type['totalResults'] / 50);
+                    } while (in_array($current_page, $visitedPages));
+
                     $recipes = FatSecret::searchRecipes('', $current_page, 50, $recipe_type['type'])['recipes']['recipe'];
                     $numbers = range(0, sizeof($recipes) - 1);
                     shuffle($numbers);
@@ -95,7 +103,7 @@ class Algorithm
                     $i--;
                 }
 
-                sleep(1);
+                sleep(0.75);
             }
         }
 
@@ -189,11 +197,14 @@ class Algorithm
 
     private function checkRecipe($recipe_id, $allergens, $categories, $diets)
     {
-        $recipe = new Recipe(Fatsecret::getRecipe($recipe_id)['recipe']);
+        $log = [];
+
+        $log['start'] =
+        $recipe = new Recipe($this->cacheRecipe($recipe_id));
 
         // Check allergens
         foreach ($allergens as $allergen) {
-            if ($recipe->hasAllergen($allergen)) {
+            if ($recipe->hasAllergen(Allergen::where('description', $allergen)->value('shortcut'))) {
                 return false;
             }
         }

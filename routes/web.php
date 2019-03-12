@@ -49,7 +49,8 @@ $router->group(['prefix' => 'api'], function () use ($router) {
     $router->post('form', ['uses' => 'AlgorithmController@createAlgorithm']);
 
     // ...
-    $router->post('gen', ['uses' => 'AlgorithmController@generateWeek']);
+    $router->get('gen/{week}', ['uses' => 'AlgorithmController@generateWeek']);
+
 
     // Create grocery list for one specific user with http://localhost:8000/api/grocerylist
     $router->post('groceries', ['uses' => 'GroceryListController@createIndividualGroceryList']);

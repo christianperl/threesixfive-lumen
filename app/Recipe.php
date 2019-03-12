@@ -25,7 +25,7 @@ class Recipe
     const ALL_ALLERGENS = [
         'A' => [],
         'B' => [],
-        'C' => [],
+        'C' => ['Egg'],
         'D' => [],
         'E' => [],
         'F' => [],

@@ -27,7 +27,6 @@ class CreateUserDietTable extends Migration
         */
     public function down()
     {
-        Schema::dropIfExists('diets');
         Schema::dropIfExists('user_diets');
     }
 }

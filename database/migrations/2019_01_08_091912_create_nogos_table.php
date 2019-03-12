@@ -31,8 +31,6 @@ class CreateNogosTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('categories');
-        Schema::dropIfExists('allergens');
         Schema::dropIfExists('nogos');
     }
 }
