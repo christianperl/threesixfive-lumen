@@ -45,13 +45,17 @@ class Recipe
         $this->name = $recipe['recipe_name'];
         $this->description = $recipe['recipe_description'];
         $this->types = $recipe['recipe_types']['recipe_type'];
-        $this->categories = $recipe['recipe_categories']['recipe_category'];
+        $this->categories = isset($recipe['recipe_categories']) ? $recipe['recipe_categories']['recipe_category'] : [];
         $this->serving = $recipe['number_of_servings'];
         $this->direction = $recipe['directions']['direction'];
         $this->ingredients = [];
 
-        foreach ($recipe['ingredients']['ingredient'] as $ingredient) {
-            array_push($this->ingredients, new Ingredient($ingredient));
+        if (isset($recipe['ingredients']['ingredient']['food_id'])) {
+            $this->ingredients = new Ingredient($recipe['ingredients']['ingredient']);
+        } else {
+            foreach ($recipe['ingredients']['ingredient'] as $ingredient) {
+                $this->ingredients[] = new Ingredient($ingredient);
+            }
         }
     }
 
@@ -59,7 +63,7 @@ class Recipe
     {
         $ingredients = [];
         foreach ($this->ingredients as $ingredient) {
-            array_push($ingredients, $ingredient());
+            $ingredients[] = $ingredient();
         }
 
         return [
@@ -98,7 +102,7 @@ class Recipe
     public function hasDiet($diet)
     {
         foreach ($this->categories as $category) {
-            if ($category == $diet) {
+            if ($category === $diet) {
                 return true;
             }
         }

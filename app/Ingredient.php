@@ -2,13 +2,11 @@
 
 namespace App;
 
-use App\Traits\CacheTrait;
-use Fatsecret;
+
+use App\Services\Api;
 
 class Ingredient
 {
-    use CacheTrait;
-
     private $id;
 
     private $name;
@@ -28,9 +26,9 @@ class Ingredient
         $this->units = $ingredient['number_of_units'];
         $this->measurement = $ingredient['measurement_description'];
 
-        $fat = $this->cacheIngredient($this->id);
+        $fat = Api::Ingredient($this->id);
 
-        $this->sub_categories = (isset($fat['food_sub_categories'])) ? $fat['food_sub_categories']['food_sub_category'] : [];
+        $this->sub_categories = (isset($fat['food_sub_categories'])) ? (count($fat['food_sub_categories']) > 1 ? $fat['food_sub_categories']['food_sub_category'] : [$fat['food_sub_categories']['food_sub_category']]) : [];
 
         $this->servings = isset(($serv = $fat['servings']['serving'])['serving_id']) ? [$serv] : $serv;
     }
@@ -53,7 +51,7 @@ class Ingredient
     public function getGrams($measurement)
     {
         foreach ($this->servings as $serving) {
-            if ($serving['measurement_description'] == $measurement) {
+            if ($serving['measurement_description'] === $measurement) {
                 return $serving['metric_serving_amount'];
             }
         }

@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Grocery;
 use App\Plan;
 use App\Recipe;
+use App\Services\Api;
 use Carbon\Carbon;
-use FatSecret;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -32,13 +32,13 @@ class GroceryListController extends Controller
                 if (!($plan = Plan::where('pk_fk_user_id', '=', Auth::id())->whereBetween('pk_date', [$today, $sunday])->get(['breakfast', 'lunch', 'main_dish', 'snack']))->isEmpty()) {
                     foreach ($plan as $item) {
                         foreach (['breakfast', 'lunch', 'main_dish', 'snack'] as $type) {
-                            if (($recipe_id = $item[$type]) != null) {
-                                $recipe = new Recipe(Fatsecret::getRecipe($recipe_id)['recipe']);
+                            if (($recipe_id = $item[$type]) !== null) {
+                                $recipe = new Recipe(Api::Recipe($recipe_id));
                                 foreach ($recipe->getIngredients() as $ingredient) {
                                     if (Grocery::where('name', $ingredient->getName())->get()->isEmpty()) {
                                         $input = [
                                             'name' => $ingredient->getName(),
-                                            'serving' => (($measurement = $ingredient->getMeasurement()) != 'g' ? $ingredient->getGrams($measurement) : $measurement) * $ingredient->getUnits(),
+                                            'serving' => (($measurement = $ingredient->getMeasurement()) !== 'g' ? $ingredient->getGrams($measurement) : $measurement) * $ingredient->getUnits(),
                                             'measurement' => 'g',
                                             'checked' => false,
                                             'generated' => true

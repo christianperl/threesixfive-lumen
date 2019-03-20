@@ -3,16 +3,13 @@
 namespace App\Traits;
 
 use App\Recipe;
-use FatSecret;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Traits\CacheTrait;
+use App\Services\Api;
 
 trait MenuTrait
 {
-    use CacheTrait;
-
     public function getMenuWeek($year, $week, $json = true, $detailed = true)
     {
 
@@ -30,10 +27,10 @@ trait MenuTrait
 
         foreach ($select as $item) {
             if ($detailed) {
-                $weekPlan[$item->weekday]['breakfast'] = (new Recipe($this->cacheRecipe($item->breakfast)))();
-                $weekPlan[$item->weekday]['lunch'] = (new Recipe($this->cacheRecipe($item->lunch)))();
-                $weekPlan[$item->weekday]['main_dish'] = (new Recipe($this->cacheRecipe($item->main_dish)))();
-                $weekPlan[$item->weekday]['snack'] = (new Recipe($this->cacheRecipe($item->snack)))();
+                $weekPlan[$item->weekday]['breakfast'] = (new Recipe(Api::Recipe($item->breakfast)))();
+                $weekPlan[$item->weekday]['lunch'] = (new Recipe(Api::Recipe($item->lunch)))();
+                $weekPlan[$item->weekday]['main_dish'] = (new Recipe(Api::Recipe($item->main_dish)))();
+                $weekPlan[$item->weekday]['snack'] = (new Recipe(Api::Recipe($item->snack)))();
             } else {
 
             }

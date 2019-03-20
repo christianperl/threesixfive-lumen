@@ -3,9 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Recipe;
-use App\Traits\CacheTrait;
+use App\Services\Api;
 use App\Traits\MenuTrait;
-use FatSecret;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -31,11 +30,11 @@ class MenuController extends Controller
             ->where('pk_fk_user_id', '=', Auth::id())
             ->where('pk_date', '=', $date)->first();
 
-        if ($select != []) {
-            $dayPlan[$select->weekday]['breakfast'] = (new Recipe($this->cacheRecipe($select->breakfast)))();
-            $dayPlan[$select->weekday]['lunch'] = (new Recipe($this->cacheRecipe($select->lunch)))();
-            $dayPlan[$select->weekday]['main_dish'] = (new Recipe($this->cacheRecipe($select->main_dish)))();
-            $dayPlan[$select->weekday]['snack'] = (new Recipe($this->cacheRecipe($select->snack)))();
+        if ($select !== []) {
+            $dayPlan[$select->weekday]['breakfast'] = (new Recipe(Api::Recipe($select->breakfast)))();
+            $dayPlan[$select->weekday]['lunch'] = (new Recipe(Api::Recipe($select->lunch)))();
+            $dayPlan[$select->weekday]['main_dish'] = (new Recipe(Api::Recipe($select->main_dish)))();
+            $dayPlan[$select->weekday]['snack'] = (new Recipe(Api::Recipe($select->snack)))();
         }
 
         return response()->json($dayPlan);

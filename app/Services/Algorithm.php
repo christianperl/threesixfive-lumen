@@ -7,72 +7,83 @@ use App\Category;
 use App\Diet;
 use App\Nogo;
 use App\Recipe;
-use App\Traits\CacheTrait;
+use App\UserDay;
 use App\UserDiet;
-use Fatsecret;
 use Carbon\Carbon;
 use App\Plan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use phpDocumentor\Reflection\Types\Array_;
 
 class Algorithm
 {
-    use CacheTrait;
-
     private $recipe_types;
     private $diets;
     private $allergens;
     private $categories;
+    private $plan;
 
-    public function __construct($plan, $allergens, $categories, $diets)
+    public function __construct($plan = null, $allergens = null, $categories = null, $diets = null)
     {
-        $this->recipe_types = [
-            'breakfast' => [
-                'count' => 0,
-                'totalResults' => (int)FatSecret::searchRecipes('', 0, 1, 'breakfast')['recipes']['total_results'],
-                'type' => 'breakfast',
-                'days' => []
-            ],
-            'lunch' => [
-                'count' => 0,
-                'totalResults' => (int)FatSecret::searchRecipes('', 0, 1, 'lunch')['recipes']['total_results'],
-                'type' => 'lunch',
-                'days' => []
-            ],
-            'main dish' => [
-                'count' => 0,
-                'totalResults' => (int)FatSecret::searchRecipes('', 0, 1, 'main dish')['recipes']['total_results'],
-                'type' => 'main dish',
-                'days' => []
-            ],
-            'snack' => [
-                'count' => 0,
-                'totalResults' => (int)FatSecret::searchRecipes('', 0, 1, 'snack')['recipes']['total_results'],
-                'type' => 'snack',
-                'days' => []
-            ]
-        ];
-        $this->allergens = $allergens;
-        $this->categories = $categories;
-        $this->diets = $diets;
+        if ($allergens === null) {
+            $allergens = DB::table('allergens')
+                ->join('nogos', 'pk_allergen_id', '=', 'fk_object')
+                ->where([
+                    ['fk_n_user_id', Auth::id()],
+                    ['which', 'allergen']
+                ])
+                ->select('description')
+                ->get();
+
+            foreach ($allergens as $allergen) {
+                $this->allergens[] = $allergen->description;
+            }
+        } else {
+            $this->allergens = $allergens;
+        }
+
+        if ($categories === null) {
+            $categories = DB::table('categories')
+                ->join('nogos', 'pk_category_id', '=', 'fk_object')
+                ->where([
+                    ['fk_n_user_id', Auth::id()],
+                    ['which', 'category']
+                ])
+                ->select('name')
+                ->get();
+
+            foreach ($categories as $category) {
+                $this->categories[] = $category->name;
+            }
+        } else {
+            $this->categories = $categories;
+        }
+
+        if ($diets === null) {
+            $diets = DB::table('diets')
+                ->join('user_diets', 'pk_diet_id', '=', 'pk_fk_u_diets_id')
+                ->where('pk_fk_d_user_id', Auth::id())
+                ->select('description')
+                ->get();
+
+            foreach ($diets as $diet) {
+                $this->diets[] = $diet->description;
+            }
+        } else {
+            $this->diets = $diets;
+        }
+
+        $this->plan = $plan;
+        $this->recipe_types = [];
 
         foreach ($plan as $weekday) {
-            if ($weekday['breakfast']) {
-                $this->recipe_types['breakfast']['count'] += (int)$weekday['breakfast'];
-                array_push($this->recipe_types['breakfast']['days'], $weekday['weekday']);
+            foreach ($weekday['meals'] as $meal) {
+                $this->recipe_types[$meal]['days'][] = $weekday['weekday'];
             }
-            if ($weekday['lunch']) {
-                $this->recipe_types['lunch']['count'] += (int)$weekday['lunch'];
-                array_push($this->recipe_types['lunch']['days'], $weekday['weekday']);
-            }
-            if ($weekday['main dish']) {
-                $this->recipe_types['main dish']['count'] += (int)$weekday['main dish'];
-                array_push($this->recipe_types['main dish']['days'], $weekday['weekday']);
-            }
-            if ($weekday['snack']) {
-                $this->recipe_types['snack']['count'] += (int)$weekday['snack'];
-                array_push($this->recipe_types['snack']['days'], $weekday['weekday']);
-            }
+        }
+
+        foreach ($this->recipe_types as $type => $type_info) {
+            $this->recipe_types[$type]['totalResults'] = (int)Api::Search(0, 1, $type)['total_results'];
         }
     }
 
@@ -82,23 +93,23 @@ class Algorithm
         $visitedPages = [];
         $possibleRecipes = [];
 
-        foreach ($this->recipe_types as $recipe_type) {
-            for ($i = 0, $num = 0, $new_page = true; $i < sizeof($recipe_type['days']); $i++, $num++) {
+        foreach ($this->recipe_types as $type => $type_info) {
+            for ($i = 0, $num = 0, $new_page = true, $days = count($type_info['days']); $i < $days; $i++, $num++) {
                 if ($new_page) {
                     do {
-                        $current_page = rand(1, (int)$recipe_type['totalResults'] / 50);
-                    } while (in_array($current_page, $visitedPages));
+                        $current_page = random_int(1, (int)$type_info['totalResults'] / 50);
+                    } while (in_array($current_page, $visitedPages, true));
 
-                    $recipes = FatSecret::searchRecipes('', $current_page, 50, $recipe_type['type'])['recipes']['recipe'];
-                    $numbers = range(0, sizeof($recipes) - 1);
+                    $recipes = Api::Search($current_page, 50, $type)['recipe'];
+                    $numbers = range(0, count($recipes) - 1);
                     shuffle($numbers);
                     $new_page = false;
                 }
 
-                if ($i == sizeof($recipes) - 1) {
+                if ($i === count($recipes) - 1) {
                     $new_page = true;
                 } elseif ($recipe = $this->checkRecipe((int)$recipes[$numbers[$i]]['recipe_id'], $this->allergens, $this->categories, $this->diets)) {
-                    $weekPlan[$recipe_type['days'][$i]][$recipe_type['type']] = $recipe();
+                    $weekPlan[$type_info['days'][$i]][$type] = $recipe();
                 } else {
                     $i--;
                 }
@@ -110,9 +121,8 @@ class Algorithm
         return $weekPlan;
     }
 
-    public function saveWeek($weekPlan, $week)
+    public function saveWeek($weekPlan, $weekNumber)
     {
-        $response = null;
         $week = [
             ['Monday', Carbon::now()->startOfWeek()->format('Y-m-d')],
             ['Tuesday', Carbon::now()->startOfWeek()->addDay(1)->format('Y-m-d')],
@@ -123,30 +133,36 @@ class Algorithm
             ['Sunday', Carbon::now()->endOfWeek()->format('Y-m-d')]
         ];
 
-        foreach ($week as $weekDay) {
-            if (array_key_exists($weekDay[0], $weekPlan)) {
-                $response[$weekDay[0]] = $weekPlan[$weekDay[0]];
+        foreach ($week as $day) {
+            if (array_key_exists($day[0], $weekPlan)) {
                 $input = [
-                    'pk_date' => $weekDay[1],
+                    'pk_date' => $day[1],
                     'pk_fk_user_id' => (int)Auth::id(),
-                    'weekday' => $weekDay[0],
-                    'breakfast' => $weekPlan[$weekDay[0]]['breakfast']['id'],
-                    'lunch' => $weekPlan[$weekDay[0]]['lunch']['id'],
-                    'main_dish' => $weekPlan[$weekDay[0]]['main dish']['id'],
-                    'snack' => $weekPlan[$weekDay[0]]['snack']['id']
+                    'weekday' => $day[0],
                 ];
+
+                foreach (['breakfast', 'lunch', ['main_dish', 'main dish'], 'snack'] as $type) {
+                    if (is_array($type) ? isset($weekPlan[$day[0]][$type[1]]) : isset($weekPlan[$day[0]][$type])) {
+                        if (is_array($type)) {
+                            $input[$type[0]] = (int)$weekPlan[$day[0]][$type[1]]['id'];
+                        } else {
+                            $input[$type] = (int)$weekPlan[$day[0]][$type]['id'];
+                        }
+                    } else {
+                        if (is_array($type)) {
+                            $input[$type[0]] = null;
+                        } else {
+                            $input[$type] = null;
+                        }
+                    }
+                }
 
                 Plan::create($input);
             } else {
-                $response[$weekDay[0]]['breakfast'] = null;
-                $response[$weekDay[0]]['lunch'] = null;
-                $response[$weekDay[0]]['main_dish'] = null;
-                $response[$weekDay[0]]['snack'] = null;
-
                 Plan::create([
-                    'pk_date' => $weekDay[1],
+                    'pk_date' => $day[1],
                     'pk_fk_user_id' => (int)Auth::id(),
-                    'weekday' => $weekDay[0],
+                    'weekday' => $day[0],
                     'breakfast' => null,
                     'lunch' => null,
                     'main_dish' => null,
@@ -155,7 +171,7 @@ class Algorithm
             }
         }
 
-        return $response;
+        return $weekPlan;
     }
 
     public function saveUserPreferences()
@@ -192,15 +208,24 @@ class Algorithm
             ]);
         }
 
+        // Plan
+        foreach ($this->plan as $day) {
+            UserDay::create([
+                'pk_fk_user_id' => Auth::id(),
+                'weekday' => $day['weekday'],
+                'breakfast' => in_array('breakfast', $day['meals'], true) ? true : false,
+                'lunch' => in_array('lunch', $day['meals'], true) ? true : false,
+                'main_dish' => in_array('main dish', $day['meals'], true) ? true : false,
+                'snack' => in_array('snack', $day['meals'], true) ? true : false,
+            ]);
+        }
+
         return true;
     }
 
     private function checkRecipe($recipe_id, $allergens, $categories, $diets)
     {
-        $log = [];
-
-        $log['start'] =
-        $recipe = new Recipe($this->cacheRecipe($recipe_id));
+        $recipe = new Recipe(Api::Recipe($recipe_id));
 
         // Check allergens
         foreach ($allergens as $allergen) {
@@ -237,7 +262,7 @@ class Algorithm
             ->where('pk_date', '<=', $pastWeek)->get();
 
         foreach ($select as $item) {
-            if ($item->beakfast == $recipe_id | $item->lunch == $recipe_id | $item->main_dish == $recipe_id | $item->snack == $recipe_id) {
+            if ($item->beakfast === $recipe_id | $item->lunch === $recipe_id | $item->main_dish === $recipe_id | $item->snack === $recipe_id) {
                 return false;
             }
         }
