@@ -48,9 +48,6 @@ $router->group(['prefix' => 'api'], function () use ($router) {
     // Generate menu for one specific user with http://localhost:8000/api/algorithm/generate/userid
     $router->post('form', ['uses' => 'AlgorithmController@createAlgorithm']);
 
-    // ...
-    $router->get('gen/{week}', ['uses' => 'AlgorithmController@generateWeek']);
-
 
     // Create grocery list for one specific user with http://localhost:8000/api/grocerylist
     $router->post('groceries', ['uses' => 'GroceryListController@createIndividualGroceryList']);

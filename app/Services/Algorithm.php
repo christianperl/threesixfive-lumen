@@ -73,7 +73,36 @@ class Algorithm
             $this->diets = $diets;
         }
 
-        $this->plan = $plan;
+        if ($plan === null) {
+            $select = DB::table('user_days')
+                ->where('pk_fk_user_id', Auth::id())
+                ->get([
+                    'weekday',
+                    'breakfast',
+                    'lunch',
+                    'main_dish',
+                    'snack'
+                ]);
+
+            $plan = [];
+
+            foreach ($select as $day) {
+                $meals = [];
+                foreach (['breakfast', 'lunch', 'main_dish', 'snack'] as $type) {
+                    if ($day->$type) {
+                        $meals[] = $type === 'main_dish' ? 'main dish' : $type;
+                    }
+                }
+
+                $plan[] = [
+                    'weekday' => $day->weekday,
+                    'meals' => $meals
+                ];
+            }
+        } else {
+            $this->plan = $plan;
+        }
+
         $this->recipe_types = [];
 
         foreach ($plan as $weekday) {
@@ -121,16 +150,19 @@ class Algorithm
         return $weekPlan;
     }
 
-    public function saveWeek($weekPlan, $weekNumber)
+    public function saveWeek($weekPlan, $year, $weekNumber)
     {
+        $date = Carbon::now();
+        $date->setISODate($year, $weekNumber);
+
         $week = [
-            ['Monday', Carbon::now()->startOfWeek()->format('Y-m-d')],
-            ['Tuesday', Carbon::now()->startOfWeek()->addDay(1)->format('Y-m-d')],
-            ['Wednesday', Carbon::now()->startOfWeek()->addDay(2)->format('Y-m-d')],
-            ['Thursday', Carbon::now()->startOfWeek()->addDay(3)->format('Y-m-d')],
-            ['Friday', Carbon::now()->startOfWeek()->addDay(4)->format('Y-m-d')],
-            ['Saturday', Carbon::now()->startOfWeek()->addDay(5)->format('Y-m-d')],
-            ['Sunday', Carbon::now()->endOfWeek()->format('Y-m-d')]
+            ['Monday', $date->copy()->startOfWeek()->format('Y-m-d')],
+            ['Tuesday', $date->copy()->startOfWeek()->addDay()->format('Y-m-d')],
+            ['Wednesday', $date->copy()->startOfWeek()->addDays(2)->format('Y-m-d')],
+            ['Thursday', $date->copy()->startOfWeek()->addDays(3)->format('Y-m-d')],
+            ['Friday', $date->copy()->startOfWeek()->addDays(4)->format('Y-m-d')],
+            ['Saturday', $date->copy()->startOfWeek()->addDays(5)->format('Y-m-d')],
+            ['Sunday', $date->copy()->endOfWeek()->format('Y-m-d')]
         ];
 
         foreach ($week as $day) {
@@ -171,7 +203,7 @@ class Algorithm
             }
         }
 
-        return $weekPlan;
+        return true;
     }
 
     public function saveUserPreferences()
@@ -225,7 +257,7 @@ class Algorithm
 
     private function checkRecipe($recipe_id, $allergens, $categories, $diets)
     {
-        $recipe = new Recipe(Api::Recipe($recipe_id));
+        $recipe = new Recipe(Api::Recipe($recipe_id), true);
 
         // Check allergens
         foreach ($allergens as $allergen) {

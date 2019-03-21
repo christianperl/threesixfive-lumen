@@ -15,7 +15,7 @@ class Api
     {
         if (Cache::has($id)) {
             if (($redis = new Client())->ttl('lumen_cache:' . $id) <= 3600) {
-                dispatch(new Recache($id, 'i'));
+                //dispatch(new Recache($id, 'i'));
             }
 
             return Cache::get($id);
@@ -31,7 +31,7 @@ class Api
     {
         if (Cache::has($id)) {
             if (($redis = new Client())->ttl('lumen_cache:' . $id) <= 3600) {
-                dispatch(new Recache($id, 'r'));
+                //dispatch(new Recache($id, 'r'));
             }
 
             return Cache::get($id);

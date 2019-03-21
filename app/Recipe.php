@@ -39,7 +39,7 @@ class Recipe
         'O' => []
     ];
 
-    public function __construct($recipe)
+    public function __construct($recipe, $loadIngredients = true)
     {
         $this->id = $recipe['recipe_id'];
         $this->name = $recipe['recipe_name'];
@@ -50,29 +50,35 @@ class Recipe
         $this->direction = $recipe['directions']['direction'];
         $this->ingredients = [];
 
-        if (isset($recipe['ingredients']['ingredient']['food_id'])) {
-            $this->ingredients = new Ingredient($recipe['ingredients']['ingredient']);
-        } else {
-            foreach ($recipe['ingredients']['ingredient'] as $ingredient) {
-                $this->ingredients[] = new Ingredient($ingredient);
+        if ($loadIngredients) {
+            if (isset($recipe['ingredients']['ingredient']['food_id'])) {
+                $this->ingredients = [new Ingredient($recipe['ingredients']['ingredient'])];
+            } else {
+                foreach ($recipe['ingredients']['ingredient'] as $ingredient) {
+                    $this->ingredients[] = new Ingredient($ingredient);
+                }
             }
         }
     }
 
     public function __invoke()
     {
-        $ingredients = [];
-        foreach ($this->ingredients as $ingredient) {
-            $ingredients[] = $ingredient();
-        }
+        if (!($this->ingredients === [])) {
+            $ingredients = [];
+            foreach ($this->ingredients as $ingredient) {
+                $ingredients[] = $ingredient();
+            }
 
-        return [
-            'id' => (int)$this->id,
-            'name' => $this->name,
-            'description' => $this->description,
-            'ingredients' => $ingredients,
-            'directions' => $this->direction
-        ];
+            return [
+                'id' => (int)$this->id,
+                'name' => $this->name,
+                'description' => $this->description,
+                'ingredients' => $ingredients,
+                'directions' => $this->direction
+            ];
+        } else {
+            return $this->name;
+        }
     }
 
     public function hasAllergen($allergen)

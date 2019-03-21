@@ -18,6 +18,6 @@ class PdfController extends Controller
     {
         $pdf = new Pdf();
 
-        $pdf->generate($this->getMenuWeek($year, $week, false));
+        $pdf->generate($this->getMenuWeek($year, $week, false, false, false));
     }
 }
