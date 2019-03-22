@@ -48,7 +48,7 @@ trait MenuTrait
                 $Algorithm = new Algorithm();
 
                 $Week = $Algorithm->generateWeek();
-                $Week = $Algorithm->saveWeek($Week, $year, $week);
+                $Algorithm->saveWeek($Week, $year, $week);
 
                 return $Week;
             }
