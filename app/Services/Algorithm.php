@@ -13,7 +13,6 @@ use Carbon\Carbon;
 use App\Plan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use phpDocumentor\Reflection\Types\Array_;
 
 class Algorithm
 {
