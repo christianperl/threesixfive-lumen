@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Algorithm;
+
 class ExampleController extends Controller
 {
     /**
@@ -14,5 +16,11 @@ class ExampleController extends Controller
         //
     }
 
-    //
+    public function test($type) {
+        $Algorithm = new Algorithm();
+
+        $recipe = $Algorithm->generateOneType($type);
+
+        return response()->json($recipe);
+    }
 }

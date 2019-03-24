@@ -24,7 +24,14 @@ trait MenuTrait
         $select = DB::table('plans')
             ->where('pk_fk_user_id', '=', Auth::id())
             ->where('pk_date', '>=', $firstDate)
-            ->where('pk_date', '<=', $lastDate)->get();
+            ->where('pk_date', '<=', $lastDate)
+            ->get([
+                'weekday',
+                'breakfast',
+                'lunch',
+                'main_dish',
+                'snack'
+            ]);
 
         if (!$select->isEmpty()) {
             foreach ($select as $item) {
@@ -38,21 +45,19 @@ trait MenuTrait
 
             if ($json) {
                 return response()->json($weekPlan);
-            } else {
-                return $weekPlan;
             }
-        } else {
-            if (Carbon::now()->isAfter($firstDate)) {
-                return response()->json([404 => 'There is no plan for this week available'], 404);
-            } else {
-                $Algorithm = new Algorithm();
 
-                $Week = $Algorithm->generateWeek();
-                $Algorithm->saveWeek($Week, $year, $week);
-
-                return $Week;
-            }
+            return $weekPlan;
+        }
+        if (Carbon::now()->isAfter($firstDate)) {
+            return response()->json([404 => 'There is no plan for this week available anymore'], 404);
         }
 
+        $Algorithm = new Algorithm();
+
+        $Week = $Algorithm->generateWeek();
+        $Algorithm->saveWeek($Week, $year, $week);
+
+        return $this->getMenuWeek($year, $week, $json, $detailed, $generateIfNotExisting);
     }
 }

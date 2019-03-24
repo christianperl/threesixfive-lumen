@@ -126,7 +126,7 @@ class Algorithm
             for ($i = 0, $num = 0, $new_page = true, $days = count($type_info['days']); $i < $days; $i++, $num++) {
                 if ($new_page) {
                     do {
-                        $current_page = random_int(1, (int)$type_info['totalResults'] / 50);
+                        $current_page = random_int(1, (int)($type_info['totalResults'] / 50));
                     } while (in_array($current_page, $visitedPages, true));
 
                     $recipes = Api::Search($current_page, 50, $type)['recipe'];
@@ -148,6 +148,41 @@ class Algorithm
         }
 
         return $weekPlan;
+    }
+
+    public function generateOneType($type)
+    {
+        $result = null;
+        $visitedPages = [];
+        $possibleRecipes = [];
+        $totalResults = $this->recipe_types[$type]['totalResults'];
+
+        for ($i = 0, $new_page = true; $i < $totalResults; $i++) {
+            if ($new_page) {
+                do {
+                    $current_page = random_int(1, (int)($totalResults / 50));
+                } while (in_array($current_page, $visitedPages, true));
+
+                $recipes = Api::Search($current_page, 50, $type)['recipe'];
+                $numbers = range(0, count($recipes) - 1);
+                shuffle($numbers);
+                $new_page = false;
+            }
+
+            if ($i === count($recipes) - 1) {
+                $new_page = true;
+                $i = 0;
+            } elseif ($recipe = $this->checkRecipe((int)$recipes[$numbers[$i]]['recipe_id'], $this->allergens, $this->categories, $this->diets)) {
+                $result = $recipe->getId();
+                break;
+            } else {
+                $i--;
+            }
+
+            sleep(0.75);
+        }
+
+        return $result;
     }
 
     public function saveWeek($weekPlan, $year, $weekNumber)

@@ -17,6 +17,10 @@ $router->get('/', function () use ($router) {
 
 $router->group(['prefix' => 'api'], function () use ($router) {
 
+    // Only for test purposes
+    $router->get('test/{type}', ['uses' => 'ExampleController@test']);
+
+
     // Get all users with http://localhost:8000/api/users
     $router->get('users', ['uses' => 'UsersController@showAllUsers']);
 
@@ -39,14 +43,17 @@ $router->group(['prefix' => 'api'], function () use ($router) {
     $router->put('user', ['uses' => 'UsersController@update']);
 
 
-    // Get menu (week) from one specific user with http://localhost:8000/api/menu/userid
+    // Get menu (week) from one specific user (will be generated if not generated yet) with http://localhost:8000/api/menu/userid
     $router->get('week/{year}/{week}', ['uses' => 'MenuController@getMenuWeek']);
 
     // Get menu (day) from one specific user with http://localhost:8000/api/menu/userid
     $router->get('day/{date}', ['uses' => 'MenuController@getMenuDay']);
 
-    // Generate menu for one specific user with http://localhost:8000/api/algorithm/generate/userid
+    // Generate first menu for one specific user with http://localhost:8000/api/algorithm/generate/userid
     $router->post('form', ['uses' => 'AlgorithmController@createAlgorithm']);
+
+    // Regenerate one specific
+    $router->post('regen', ['uses' => 'AlgorithmController@regenerateType']);
 
 
     // Create grocery list for one specific user with http://localhost:8000/api/grocerylist
