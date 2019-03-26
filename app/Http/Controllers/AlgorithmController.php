@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 
-use App\Plan;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Services\Algorithm;

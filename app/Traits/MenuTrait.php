@@ -53,11 +53,15 @@ trait MenuTrait
             return response()->json([404 => 'There is no plan for this week available anymore'], 404);
         }
 
-        $Algorithm = new Algorithm();
+        if ($generateIfNotExisting) {
+            $Algorithm = new Algorithm();
 
-        $Week = $Algorithm->generateWeek();
-        $Algorithm->saveWeek($Week, $year, $week);
+            $Week = $Algorithm->generateWeek();
+            $Algorithm->saveWeek($Week, $year, $week);
 
-        return $this->getMenuWeek($year, $week, $json, $detailed, $generateIfNotExisting);
+            return $this->getMenuWeek($year, $week, $json, $detailed, $generateIfNotExisting);
+        }
+
+        return response()->json([404 => 'There is no plan for this week available'], 404);
     }
 }
