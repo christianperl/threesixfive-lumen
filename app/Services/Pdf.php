@@ -65,13 +65,13 @@ class Pdf
 
         foreach ($weekPlan as $name => $day) {
             if ($day != []) {
-                $this->pdf::AddPage('L');
-
-                $html = '<h1 align="left">' . $name . '</h1>
-                    <div style="border-top: 2px solid #f8b735"></div>';
-
                 foreach (['breakfast', 'lunch', 'main dish', 'snack'] as $type) {
                     if (isset($day[$type])) {
+                        $this->pdf::AddPage('L');
+
+                        $html = '<h1 align="left">' . $name . '</h1>
+                        <div style="border-top: 2px solid #f8b735"></div>';
+
                         $html .= '<h3 align="center" style="font-size: large;"><span style="font-size: small; color: #2b898b">' . ucfirst($type) . '  </span>' . $day[$type]['name'] . '</h3>';
 
                         $html .= '<p align="left">' . $day[$type]['description'] . '</p>';
@@ -87,10 +87,10 @@ class Pdf
                         }
 
                         $html .= '</ol><div></div>';
+
+                        $this->pdf::writeHTML($html, true, false, false, false, 'C');
                     }
                 }
-
-                $this->pdf::writeHTML($html, true, false, false, false, 'C');
             }
         }
 

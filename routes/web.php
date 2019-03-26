@@ -18,7 +18,7 @@ $router->get('/', function () use ($router) {
 $router->group(['prefix' => 'api'], function () use ($router) {
 
     // Only for test purposes
-    $router->get('test/{type}', ['uses' => 'ExampleController@test']);
+    $router->post('test', ['uses' => 'ExampleController@test']);
 
 
     // Get all users with http://localhost:8000/api/users

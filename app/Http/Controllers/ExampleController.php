@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\Algorithm;
+use App\User;
+use App\UserDay;
+use Illuminate\Http\Request;
 
 class ExampleController extends Controller
 {
@@ -16,11 +19,7 @@ class ExampleController extends Controller
         //
     }
 
-    public function test($type) {
-        $Algorithm = new Algorithm();
-
-        $recipe = $Algorithm->generateOneType($type);
-
-        return response()->json($recipe);
+    public function test(Request $request) {
+        return response()->json(UserDay::where('pk_fk_user_id', User::where('email', '=', $request['email'])->value('pk_user_id'))->get()->isEmpty());
     }
 }

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Plan;
 use App\User;
+use App\UserDay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -42,6 +44,11 @@ class UsersController extends Controller
                 $user['auth-token'] = Str::random(60);
                 $redis = new Client();
                 $redis->setex($user['auth-token'], 60 * 60 * 2, $user['pk_user_id']);
+
+                if (UserDay::where('pk_fk_user_id', User::where('email', '=', $data['email'])->value('pk_user_id'))->get()->isEmpty()) {
+                    $user['init-reg'] = true;
+                }
+
                 return response()->json($user);
             } else {
                 return response()->json(['Incorrect password' => 406], 406);
