@@ -17,7 +17,8 @@ class CreateGroceriesTable extends Migration
             $table->increments('pk_groceries_id');
             $table->unsignedInteger('fk_user_id');
             $table->foreign('fk_user_id')->references('pk_user_id')->on('users')->onDelete('cascade');
-            $table->String('name')->unique();
+            $table->String('name');
+            $table->date('day')->nullable();
             $table->boolean('checked');
             $table->boolean('generated');
             $table->double('serving');

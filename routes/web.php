@@ -18,7 +18,7 @@ $router->get('/', function () use ($router) {
 $router->group(['prefix' => 'api'], function () use ($router) {
 
     // Only for test purposes
-    $router->post('test', ['uses' => 'ExampleController@test']);
+    $router->get('test', ['uses' => 'ExampleController@test']);
 
 
     // Get all users with http://localhost:8000/api/users
@@ -42,6 +42,12 @@ $router->group(['prefix' => 'api'], function () use ($router) {
     // Update user with http://localhost:8000/api/users/id
     $router->put('user', ['uses' => 'UsersController@update']);
 
+    // Get preferences of one specific user with http://localhost:8000/api/user/preference
+    $router->get('user/preference', ['uses' => 'AlgorithmController@getUserPreferences']);
+
+    // Get preferences of one specific user with http://localhost:8000/api/user/preference
+    $router->put('user/preference', ['uses' => 'AlgorithmController@changeUserPreferences']);
+
 
     // Get menu (week) from one specific user (will be generated if not generated yet) with http://localhost:8000/api/menu/userid
     $router->get('week/{year}/{week}', ['uses' => 'MenuController@getMenuWeek']);
@@ -59,8 +65,11 @@ $router->group(['prefix' => 'api'], function () use ($router) {
     // Create grocery list for one specific user with http://localhost:8000/api/grocerylist
     $router->post('groceries', ['uses' => 'GroceryListController@createIndividualGroceryList']);
 
-    // Get grocery list from one specific user with http://localhost:8000/api/grocerylist/userid
+    // Get grocery list (not checked) from one specific user with http://localhost:8000/api/grocerylist/userid
     $router->get('groceries', ['uses' => 'GroceryListController@getCurrentGroceryList']);
+
+    // Get grocery list (checked) from one specific user with http://localhost:8000/api/grocerylist/userid
+    $router->get('groceries/checked', ['uses' => 'GroceryListController@getCurrentGroceryList']);
 
     // Get grocery list from one specific user with http://localhost:8000/api/grocerylist/userid
     $router->get('groceries/next', ['uses' => 'GroceryListController@getNextGroceryList']);

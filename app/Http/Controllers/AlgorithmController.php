@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Services\Algorithm;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class AlgorithmController extends Controller
@@ -58,5 +59,61 @@ class AlgorithmController extends Controller
         $recipe->update([$type => $Algorithm->generateOneType($request->get('type'))]);
 
         return response()->json([201 => 'Recipe successfully regenerated'], 201);
+    }
+
+    public function getUserPreferences()
+    {
+        $plan = DB::table('user_days')
+            ->where('pk_fk_user_id', Auth::id())
+            ->get([
+                'weekday',
+                'breakfast',
+                'lunch',
+                'main_dish',
+                'snack',
+            ]);
+
+        $diets = DB::table('user_diets')
+            ->join('diets', 'pk_fk_u_diets_id', '=', 'pk_diet_id')
+            ->where('pk_fk_d_user_id', Auth::id())
+            ->get([
+                'description'
+            ]);
+
+        $categories = DB::table('nogos')
+            ->join('categories', 'fk_object', '=', 'pk_category_id')
+            ->where([
+                ['fk_n_user_id', Auth::id()],
+                ['which', 'category']
+            ])
+            ->get([
+                'name'
+            ]);
+
+        $allergens = DB::table('nogos')
+            ->join('allergens', 'fk_object', '=', 'pk_allergen_id')
+            ->where([
+                ['fk_n_user_id', Auth::id()],
+                ['which', 'allergen']
+            ])
+            ->get([
+                'description'
+            ]);
+
+        $persons = DB::table('users')
+            ->where('pk_user_id', Auth::id())
+            ->value('firstName');
+
+        $preferences = [];
+
+        foreach ([['persons', $persons], ['diets', $diets], ['categories', $categories], ['allergens', $allergens], ['plan', $plan]] as $value) {
+            $preferences[$value[0]] = $value[1];
+        }
+
+        return response()->json($preferences);
+    }
+
+    public function changeUserPreferences()
+    {
     }
 }

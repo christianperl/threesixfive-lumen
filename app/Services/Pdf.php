@@ -72,7 +72,7 @@ class Pdf
                         $html = '<h1 align="left">' . $name . '</h1>
                         <div style="border-top: 2px solid #f8b735"></div>';
 
-                        $html .= '<h3 align="center" style="font-size: large;"><span style="font-size: small; color: #2b898b">' . ucfirst($type) . '  </span>' . $day[$type]['name'] . '</h3>';
+                        $html .= '<h3 align="center" style="font-size: large;"><span style="font-size: small; color: #2b898b">' . ($type === 'main dish' ? 'Dinner' : ucfirst($type)) . '  </span>' . $day[$type]['name'] . '</h3>';
 
                         $html .= '<p align="left">' . $day[$type]['description'] . '</p>';
 
@@ -83,7 +83,7 @@ class Pdf
 
                         $html .= '</ul><p align="left" style="color: #2b898b">Directions</p><ol>';
                         foreach ($day[$type]['directions'] as $direction) {
-                            $html .= '<li>  ' . $direction['direction_description'] . '</li>';
+                            $html .= '<li>  ' . ($direction['direction_description'] ?? '') . '</li>';
                         }
 
                         $html .= '</ol><div></div>';
@@ -94,7 +94,7 @@ class Pdf
             }
         }
 
-        $this->pdf::Output('Week-' . $weekNumber . '.pdf', 'D');
+        return $this->pdf::Output('Week-' . $weekNumber . '.pdf', 'S');
     }
 
     private function generateOverview($weekplan)
@@ -102,7 +102,7 @@ class Pdf
         $table = '';
 
         foreach (['breakfast', 'lunch', 'main dish', 'snack'] as $type) {
-            $table .= '<tr style="background-color: #ebf4f4;"><td style="background-color: white; color: #2b898b">' . ucfirst($type) . '</td>';
+            $table .= '<tr style="background-color: #ebf4f4;"><td style="background-color: white; color: #2b898b">' . ($type === 'main dish' ? 'Dinner' : ucfirst($type)) . '</td>';
 
             foreach ($weekplan as $day) {
                 if (isset($day[$type])) {

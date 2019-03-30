@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Pdf;
 use App\Traits\MenuTrait;
+use http\Env\Response;
 
 class PdfController extends Controller
 {
@@ -26,6 +27,8 @@ class PdfController extends Controller
             return response()->json([410 => 'There must be something wrong'], 410);
         }
 
-        $pdf->generate($week, $year, $weekNumber);
+        $string = $pdf->generate($week, $year, $weekNumber);
+
+        return response($string)->header('Content-Type', 'text/plain');
     }
 }
