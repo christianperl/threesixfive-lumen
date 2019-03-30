@@ -49,6 +49,10 @@ class Ingredient
         $this->grocery_unit = (double)($ingredient['number_of_units'] / $number_of_servings) * $persons;
         $this->grocery_measurement = $ingredient['measurement_description'];
 
+        // Just now
+        $this->units = $ingredient['number_of_units'];
+        $this->measurement = $ingredient['measurement_description'];
+
         $fat = Api::Ingredient($this->id);
 
         if (isset($fat['food_sub_categories'])) {

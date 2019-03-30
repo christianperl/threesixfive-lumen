@@ -27,41 +27,6 @@ class GroceryListController extends Controller
     {
         $groceries = [];
 
-        /*if (($groceries_users = Grocery::where('fk_user_id', '=', Auth::id())->get(['name', 'serving', 'measurement', 'checked', 'generated']))->isEmpty()) {
-            if ($groceries_users->where('generated', true)->isEmpty()) {
-                if (!($plan = Plan::where('pk_fk_user_id', '=', Auth::id())->whereBetween('pk_date', [$today, $sunday])->get(['breakfast', 'lunch', 'main_dish', 'snack']))->isEmpty()) {
-                    foreach ($plan as $item) {
-                        foreach (['breakfast', 'lunch', 'main_dish', 'snack'] as $type) {
-                            if (($recipe_id = $item[$type]) !== null) {
-                                $recipe = new Recipe(Api::Recipe($recipe_id));
-                                foreach ($recipe->getIngredients() as $ingredient) {
-                                    if (Grocery::where('name', $ingredient->getName())->get()->isEmpty()) {
-                                        $input = [
-                                            'name' => $ingredient->getName(),
-                                            'serving' => (($measurement = $ingredient->getMeasurement()) !== 'g' ? $ingredient->getGrams($measurement) : $measurement) * $ingredient->getUnits(),
-                                            'measurement' => 'g',
-                                            'checked' => false,
-                                            'generated' => true
-                                        ];
-
-                                        $groceries_users->push($input);
-
-                                        $input['fk_user_id'] = Auth::id();
-                                        Grocery::create($input);
-                                    } else {
-                                        $grams = $ingredient->getGrams($ingredient->getMeasurement());
-                                        $currentGrams = Grocery::where('name', $ingredient->getName())->value('serving');
-
-                                        Grocery::where('name', $ingredient->getName())->update(['serving' => $currentGrams + $grams]);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }*/
-
         // Get personal groceries
         if (!($groceries_users = Grocery::where([['fk_user_id', Auth::id()], ['generated', false]])->get(['name', 'serving', 'measurement', 'checked', 'generated']))->isEmpty()) {
             foreach ($groceries_users as $grocery) {
@@ -118,14 +83,54 @@ class GroceryListController extends Controller
             $current_groceries = DB::table('groceries')
                 ->where('generated', true)
                 ->get([
+                    'name',
                     'day',
-                    'name'
+                    'serving',
+                    'measurement',
+                    'checked',
+                    'generated'
                 ]);
 
             foreach ($groceries_from_current_plan as $recipe) {
                 foreach ($recipe[0]->getIngredients() as $ingredient) {
+                    $new = true;
+                    foreach ($current_groceries->toArray() as $item) {
+                        if ($item->day === $recipe[1] && $item->name === $ingredient->getName()) {
+                            $groceries[] = [
+                                'name' => $item->name,
+                                'serving' => $item->serving,
+                                'measurement' => $item->measurement,
+                                'checked' => $item->checked,
+                                'generated' => $item->generated
+                            ];
+                            $current_groceries->forget($current_groceries->search((object)$item));
+                            $new = false;
+                            break;
+                        }
+                    }
 
+                    if ($new) {
+                        Grocery::create([
+                            'name' => $ingredient->getName(),
+                            'serving' => $ingredient->getGroceryUnit(),
+                            'measurement' => $ingredient->getGroceryMeasurement(),
+                            'checked' => false,
+                            'generated' => true,
+                            'fk_user_id' => Auth::id(),
+                            'day' => $recipe[1]
+                        ]);
+                    }
                 }
+            }
+
+            foreach ($current_groceries as $old_grocery) {
+                DB::table('groceries')
+                    ->where([
+                        ['fk_user_id', Auth::id()],
+                        ['day', $old_grocery->day],
+                        ['pk_groceries_id', $old_grocery->pk_groceries_id]
+                    ])
+                    ->delete();
             }
         }
 
