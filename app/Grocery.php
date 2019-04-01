@@ -20,7 +20,7 @@ class Grocery extends Model
         'created_at', 'updated_at'
     ];
     
-    protected $primaryKey = 'pk_groceries_id';
+    protected $primaryKey = 'pk_grocery_id';
     
     public function user() {
         return $this->belongsTo('App\User');

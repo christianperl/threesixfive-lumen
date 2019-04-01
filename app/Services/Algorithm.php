@@ -7,6 +7,7 @@ use App\Category;
 use App\Diet;
 use App\Nogo;
 use App\Recipe;
+use App\User;
 use App\UserDay;
 use App\UserDiet;
 use Carbon\Carbon;
@@ -21,8 +22,9 @@ class Algorithm
     private $allergens;
     private $categories;
     private $plan;
+    private $persons;
 
-    public function __construct($plan = null, $allergens = null, $categories = null, $diets = null)
+    public function __construct($plan = null, $allergens = null, $categories = null, $diets = null, $persons = null)
     {
         if ($allergens === null) {
             $allergens = DB::table('allergens')
@@ -70,6 +72,14 @@ class Algorithm
             }
         } else {
             $this->diets = $diets;
+        }
+
+        if ($persons === null) {
+            $this->persons = DB::table('users')
+                ->where('pk_user_id', Auth::id())
+                ->value('persons');
+        } else {
+            $this->persons = $persons;
         }
 
         if ($plan === null) {
@@ -242,6 +252,10 @@ class Algorithm
 
     public function saveUserPreferences()
     {
+        // Persons
+        $user = User::findOrFail(Auth::id());
+        $user->update(['persons' => $this->persons]);
+
         // Diets
         foreach ($this->diets as $diet) {
             $diet_id = Diet::where('description', $diet)->value('pk_diet_id');

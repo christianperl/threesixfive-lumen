@@ -28,7 +28,7 @@ class GroceryListController extends Controller
         $groceries = [];
 
         // Get personal groceries
-        if (!($groceries_users = Grocery::where([['fk_user_id', Auth::id()], ['generated', false]])->get(['name', 'serving', 'measurement', 'checked', 'generated']))->isEmpty()) {
+        if (!($groceries_users = Grocery::where([['fk_user_id', Auth::id()], ['generated', false]])->get(['pk_grocery_id', 'name', 'serving', 'measurement', 'checked', 'generated']))->isEmpty()) {
             foreach ($groceries_users as $grocery) {
                 $groceries[] = $grocery;
             }
@@ -40,25 +40,25 @@ class GroceryListController extends Controller
         $today = Carbon::now()->format('Y-m-d');
         $sunday = Carbon::parse('next sunday')->format('Y-m-d');
 
-        if (($groceries_generated = Grocery::where([['fk_user_id', Auth::id()], ['generated', true]])->get(['name', 'serving', 'measurement', 'checked', 'generated']))->isEmpty()) {
+        if (Grocery::where([['fk_user_id', Auth::id()], ['generated', true]])->get(['name', 'serving', 'measurement', 'checked', 'generated'])->isEmpty()) {
             if (!($plan = DB::table('plans')->where('pk_fk_user_id', Auth::id())->whereBetween('pk_date', [$today, $sunday])->get(['pk_date', 'breakfast', 'lunch', 'main_dish', 'snack']))->isEmpty()) {
                 $recipes = $this->planToGroceries($plan);
 
                 foreach ($recipes as $recipe) {
                     foreach ($recipe[0]->getIngredients() as $ingredient) {
-                        $genereated = [
+                        $generated = [
                             'name' => $ingredient->getName(),
                             'serving' => $ingredient->getGroceryUnit(),
                             'measurement' => $ingredient->getGroceryMeasurement(),
                             'checked' => false,
                             'generated' => true
                         ];
-                        $groceries[] = $genereated;
+                        $groceries[] = $generated;
 
-                        $genereated['fk_user_id'] = Auth::id();
-                        $genereated['day'] = $recipe[1];
+                        $generated['fk_user_id'] = Auth::id();
+                        $generated['day'] = $recipe[1];
 
-                        Grocery::create($genereated);
+                        //Grocery::create($generated);
                     }
                 }
             } else {
@@ -96,20 +96,20 @@ class GroceryListController extends Controller
                     $new = true;
                     foreach ($current_groceries->toArray() as $item) {
                         if ($item->day === $recipe[1] && $item->name === $ingredient->getName()) {
-                            $groceries[] = [
+                            /*$groceries[] = [
                                 'name' => $item->name,
                                 'serving' => $item->serving,
                                 'measurement' => $item->measurement,
                                 'checked' => $item->checked,
                                 'generated' => $item->generated
-                            ];
+                            ];*/
                             $current_groceries->forget($current_groceries->search((object)$item));
                             $new = false;
                             break;
                         }
                     }
 
-                    if ($new) {
+                    if (false) {
                         Grocery::create([
                             'name' => $ingredient->getName(),
                             'serving' => $ingredient->getGroceryUnit(),
@@ -128,7 +128,7 @@ class GroceryListController extends Controller
                     ->where([
                         ['fk_user_id', Auth::id()],
                         ['day', $old_grocery->day],
-                        ['pk_groceries_id', $old_grocery->pk_groceries_id]
+                        ['pk_grocery_id', $old_grocery->pk_grocery_id]
                     ])
                     ->delete();
             }
@@ -141,12 +141,26 @@ class GroceryListController extends Controller
     {
         $nextMonday = (new Carbon('next Monday'))->format('Y-m-d');
         $nextSunday = (new Carbon('next Monday'))->endOfWeek()->format('Y-m-d');
+        $nextGroceries = [];
 
-        if (!($nextWeek = Plan::where('pk_fk_user_id', '=', Auth::id())->whereBetween('pk_date', [$nextMonday, $nextSunday])->get(['breakfast', 'lunch', 'main_dish', 'snack']))->isEmpty()) {
-            return response()->json($nextWeek);
-        } else {
-            return response()->json(['The plan for the next week is not generated yet.' => 428], 428);
+        if (!($nextWeek = Plan::where('pk_fk_user_id', '=', Auth::id())->whereBetween('pk_date', [$nextMonday, $nextSunday])->get(['pk_date', 'breakfast', 'lunch', 'main_dish', 'snack']))->isEmpty()) {
+
+            $recipes = $this->planToGroceries($nextWeek);
+
+            foreach ($recipes as $recipe) {
+                foreach ($recipe[0]->getIngredients() as $ingredient) {
+                    $nextGroceries[] = [
+                        'name' => $ingredient->getName(),
+                        'serving' => $ingredient->getGroceryUnit(),
+                        'measurement' => $ingredient->getGroceryMeasurement()
+                    ];
+                }
+            }
+
+            return $nextGroceries;
         }
+
+        return response()->json(['The plan for the next week is not generated yet.' => 428], 428);
     }
 
     public function createIndividualGroceryList(Request $request)
@@ -166,6 +180,11 @@ class GroceryListController extends Controller
         $grocery = Grocery::create($input);
 
         return response()->json([201 => 'Grocery added'], 201);
+    }
+
+    public function deleteGrocery()
+    {
+
     }
 
     private function planToGroceries($plan)

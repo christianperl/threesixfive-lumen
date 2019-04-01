@@ -27,7 +27,8 @@ class AlgorithmController extends Controller
             $request->plan,
             $request->allergens,
             $request->categories,
-            $request->diets
+            $request->diets,
+            $request->persons
         );
 
         $Algorithm->saveUserPreferences();

@@ -42,10 +42,9 @@ class Ingredient
         $this->serving_id = $ingredient['serving_id'];
         $this->name = $ingredient['food_name'];
         $this->sub_categories = [];
-        /*$persons = DB::table('users')
+        $persons = DB::table('users')
             ->where('pk_user_id', Auth::id())
-            ->value('persons');*/
-        $persons = $number_of_servings;
+            ->value('persons');
         $this->grocery_unit = (double)($ingredient['number_of_units'] / $number_of_servings) * $persons;
         $this->grocery_measurement = $ingredient['measurement_description'];
 
