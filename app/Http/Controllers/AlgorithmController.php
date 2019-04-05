@@ -122,6 +122,13 @@ class AlgorithmController extends Controller
         DB::table('user_days')->where('pk_fk_user_id', Auth::id())->delete();
         DB::table('users')->where('pk_user_id', Auth::id())->update(['persons' => null]);
 
+        DB::table('plans')
+            ->where([
+                ['pk_fk_user_id', Auth::id()],
+                ['pk_date', '>', Carbon::now()->endOfWeek()->format('Y-m-d')]
+            ])
+            ->delete();
+
         $Algorithm = new Algorithm(
             $request->get('plan'),
             $request->get('allergens'),

@@ -30,6 +30,8 @@ class GroceryListController extends Controller
         // Get personal groceries
         if (!($groceries_users = Grocery::where([['fk_user_id', Auth::id()], ['generated', false]])->get(['pk_grocery_id', 'name', 'serving', 'measurement', 'checked', 'generated']))->isEmpty()) {
             foreach ($groceries_users as $grocery) {
+                $grocery['grocery_id'] = $grocery['pk_grocery_id'];
+                unset($grocery['pk_grocery_id']);
                 $groceries[] = $grocery;
             }
         }
@@ -59,6 +61,8 @@ class GroceryListController extends Controller
                         Grocery::create($generated);
                     }
                 }
+
+                return self::getCurrentGroceryList($json);
             } else {
                 return $groceries;
             }
