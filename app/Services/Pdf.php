@@ -29,7 +29,7 @@ class Pdf
         $this->pdf::SetAutoPageBreak(true, 15);
     }
 
-    public function generate($weekPlan, $year, $weekNumber)
+    public function generateWeek($weekPlan, $year, $weekNumber)
     {
         $date = Carbon::now();
         $date->setISODate($year, $weekNumber);
@@ -64,7 +64,7 @@ class Pdf
         $this->pdf::writeHTML($html, true, false, false, false, 'C');
 
         foreach ($weekPlan as $name => $day) {
-            if ($day != []) {
+            if ($day !== []) {
                 foreach (['breakfast', 'lunch', 'main dish', 'snack'] as $type) {
                     if (isset($day[$type])) {
                         $this->pdf::AddPage('L');
@@ -94,7 +94,36 @@ class Pdf
             }
         }
 
-        return $this->pdf::Output('Week-' . $weekNumber . '.pdf', 'S');
+        $this->pdf::Output('Week-' . $weekNumber . '.pdf', 'I');
+    }
+
+    public function generateGroceryList($grocerylist, $user)
+    {
+        $firstDate = Carbon::now()->format('d.m.Y');
+        $lastDate = Carbon::now()->endOfWeek()->format('d.m.Y');
+
+        $this->pdf::AddPage('H');
+
+        $header = '<div>
+<h1>Grocery List - ' . $user->firstName . ' ' . $user->lastName . '</h1>
+</div>
+<p style="font-size: x-small; color: #2b898b">All generated items are highlighted in colour and required between ' . $firstDate . ' and ' . $lastDate . '</p>
+<div style="border-top: 2px solid #f8b735"></div>';
+
+        $html = '<table cellspacing="5">';
+
+        foreach ($grocerylist as $item) {
+            $list_start = '<tr><td style="width: 5%"></td><td style="background-color: #ebf4f4; width: 15px; height: 15px">' . ($item['checked'] ? 'X' : '') . '</td><td style="width: 5%"></td>';
+            $list_end = '</tr>';
+
+            $html .= $list_start . '<td style="width: 100%; color: ' . ($item['generated'] ? '#26704f' : 'black') . '" align="left">' . $item['serving'] . ' ' . $item['measurement'] . ' ' . $item['name'] . '</td>' . $list_end;
+        }
+
+        $html .= '</table>';
+
+        $this->pdf::writeHTML($header . $html, true, false, false, false, 'C');
+
+        $this->pdf::Output('Groceries-' . $user->firstName . '-' . $user->lastName . '.pdf', 'I');
     }
 
     private function generateOverview($weekplan)
@@ -117,5 +146,4 @@ class Pdf
 
         return $table;
     }
-
 }

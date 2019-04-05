@@ -23,7 +23,7 @@ class GroceryListController extends Controller
         $this->middleware('auth');
     }
 
-    public function getCurrentGroceryList()
+    public static function getCurrentGroceryList($json = true)
     {
         $groceries = [];
 
@@ -34,21 +34,19 @@ class GroceryListController extends Controller
             }
         }
 
-        DB::table('groceries')->where('generated', true)->delete();
-
         // Get generated groceries
         $today = Carbon::now()->format('Y-m-d');
         $sunday = Carbon::parse('next sunday')->format('Y-m-d');
 
         if (Grocery::where([['fk_user_id', Auth::id()], ['generated', true]])->get(['name', 'serving', 'measurement', 'checked', 'generated'])->isEmpty()) {
             if (!($plan = DB::table('plans')->where('pk_fk_user_id', Auth::id())->whereBetween('pk_date', [$today, $sunday])->get(['pk_date', 'breakfast', 'lunch', 'main_dish', 'snack']))->isEmpty()) {
-                $recipes = $this->planToGroceries($plan);
+                $recipes = self::planToGroceries($plan);
 
                 foreach ($recipes as $recipe) {
                     foreach ($recipe[0]->getIngredients() as $ingredient) {
                         $generated = [
                             'name' => $ingredient->getName(),
-                            'serving' => $ingredient->getGroceryUnit(),
+                            'serving' => round($ingredient->getGroceryUnit(), 2),
                             'measurement' => $ingredient->getGroceryMeasurement(),
                             'checked' => false,
                             'generated' => true
@@ -58,11 +56,11 @@ class GroceryListController extends Controller
                         $generated['fk_user_id'] = Auth::id();
                         $generated['day'] = $recipe[1];
 
-                        //Grocery::create($generated);
+                        Grocery::create($generated);
                     }
                 }
             } else {
-                return response()->json([404 => 'Week not generated yet'], 404);
+                return $groceries;
             }
         } else {
             Grocery::where('day', '<', $today)->delete();
@@ -78,11 +76,15 @@ class GroceryListController extends Controller
                     'snack'
                 ]);
 
-            $groceries_from_current_plan = $this->planToGroceries($current_plan);
+            $groceries_from_current_plan = self::planToGroceries($current_plan);
 
             $current_groceries = DB::table('groceries')
-                ->where('generated', true)
+                ->where([
+                    ['generated', true],
+                    ['fk_user_id', Auth::id()]
+                ])
                 ->get([
+                    'pk_grocery_id',
                     'name',
                     'day',
                     'serving',
@@ -96,21 +98,22 @@ class GroceryListController extends Controller
                     $new = true;
                     foreach ($current_groceries->toArray() as $item) {
                         if ($item->day === $recipe[1] && $item->name === $ingredient->getName()) {
-                            /*$groceries[] = [
+                            $groceries[] = [
+                                'grocery_id' => $item->pk_grocery_id,
                                 'name' => $item->name,
-                                'serving' => $item->serving,
+                                'serving' => round($item->serving, 2),
                                 'measurement' => $item->measurement,
                                 'checked' => $item->checked,
                                 'generated' => $item->generated
-                            ];*/
+                            ];
                             $current_groceries->forget($current_groceries->search((object)$item));
                             $new = false;
                             break;
                         }
                     }
 
-                    if (false) {
-                        Grocery::create([
+                    if ($new) {
+                        $new_grocery = [
                             'name' => $ingredient->getName(),
                             'serving' => $ingredient->getGroceryUnit(),
                             'measurement' => $ingredient->getGroceryMeasurement(),
@@ -118,7 +121,11 @@ class GroceryListController extends Controller
                             'generated' => true,
                             'fk_user_id' => Auth::id(),
                             'day' => $recipe[1]
-                        ]);
+                        ];
+                        Grocery::create($new_grocery);
+
+                        $new_grocery['pk_grocery_id'] = DB::table('groceries')->latest('pk_grocery_id')->value('pk_grocery_id');
+                        $groceries[] = $new_grocery;
                     }
                 }
             }
@@ -134,7 +141,11 @@ class GroceryListController extends Controller
             }
         }
 
-        return response()->json($groceries);
+        if ($json) {
+            return response()->json($groceries);
+        }
+
+        return $groceries;
     }
 
     public function getNextGroceryList()
@@ -151,7 +162,7 @@ class GroceryListController extends Controller
                 foreach ($recipe[0]->getIngredients() as $ingredient) {
                     $nextGroceries[] = [
                         'name' => $ingredient->getName(),
-                        'serving' => $ingredient->getGroceryUnit(),
+                        'serving' => round($ingredient->getGroceryUnit(), 2),
                         'measurement' => $ingredient->getGroceryMeasurement()
                     ];
                 }
@@ -182,12 +193,21 @@ class GroceryListController extends Controller
         return response()->json([201 => 'Grocery added'], 201);
     }
 
-    public function deleteGrocery()
+    public function deleteGrocery(Request $request)
     {
-
+        Grocery::findOrFail($request->get('grocery_id'))->delete();
+        return response()->json([200 => 'Deleted Successfully'], 200);
     }
 
-    private function planToGroceries($plan)
+    public function updateGrocery(Request $request)
+    {
+        $grocery = Grocery::findOrFail($request->get('grocery_id'));
+
+        $grocery->update($request->except('grocery_id'));
+        return response()->json($grocery, 200);
+    }
+
+    private static function planToGroceries($plan)
     {
         $recipes = [];
         foreach ($plan as $day) {

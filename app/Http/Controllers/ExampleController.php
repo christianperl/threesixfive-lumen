@@ -28,6 +28,28 @@ class ExampleController extends Controller
 
     public function test(Request $request)
     {
-        return response()->json(Grocery::where([['fk_user_id', Auth::id()], ['generated', true]])->get(['name', 'serving', 'measurement', 'checked', 'generated'])->isEmpty());
+        $recipe_id = 434219;
+        $ids = [];
+        $today = Carbon::today()->format('Y-m-d');
+        $pastWeek = Carbon::today()->subWeek()->format('Y-m-d');
+
+        $select = DB::table('plans')
+            ->where('pk_fk_user_id', '=', Auth::id())
+            ->where('pk_date', '<=', $today)
+            ->where('pk_date', '>=', $pastWeek)
+            ->get([
+                'breakfast',
+                'lunch',
+                'main_dish',
+                'snack'
+            ]);
+
+        foreach ($select as $item) {
+            foreach (['breakfast', 'lunch', 'main_dish', 'snack'] as $type) {
+                $ids[] = $item->$type;
+            }
+        }
+
+        return response()->json(in_array($recipe_id, $ids, true));
     }
 }

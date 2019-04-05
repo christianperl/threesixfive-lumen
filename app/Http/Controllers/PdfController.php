@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Pdf;
 use App\Traits\MenuTrait;
-use http\Env\Response;
+use Illuminate\Support\Facades\Auth;
 
 class PdfController extends Controller
 {
@@ -24,11 +24,22 @@ class PdfController extends Controller
         $week = $this->getMenuWeek($year, $weekNumber, false, true, false);
 
         if (!is_array($week) && $week->getStatusCode() === 404) {
-            return response()->json([410 => 'There must be something wrong'], 410);
+            return response()->json([410 => 'There seems to be something wrong'], 410);
         }
 
-        $string = $pdf->generate($week, $year, $weekNumber);
+        $pdf->generateWeek($week, $year, $weekNumber);
+    }
 
-        return response($string)->header('Content-Type', 'text/plain');
+    public function generateGroceryList()
+    {
+        $pdf = new Pdf();
+
+        $grocerylist = GroceryListController::getCurrentGroceryList(false);
+
+        if ($grocerylist === []) {
+            return response()->json([404 => 'Nothing found. There seems to be something wrong'], 404);
+        }
+
+        $pdf->generateGroceryList($grocerylist, Auth::user());
     }
 }

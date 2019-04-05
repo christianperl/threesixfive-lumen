@@ -24,11 +24,11 @@ class AlgorithmController extends Controller
     public function createAlgorithm(Request $request)
     {
         $Algorithm = new Algorithm(
-            $request->plan,
-            $request->allergens,
-            $request->categories,
-            $request->diets,
-            $request->persons
+            $request->get('plan'),
+            $request->get('allergens'),
+            $request->get('categories'),
+            $request->get('diets'),
+            $request->get('persons')
         );
 
         $Algorithm->saveUserPreferences();
@@ -48,6 +48,7 @@ class AlgorithmController extends Controller
         $recipe = DB::table('plans')
             ->where([
                 ['pk_date', $request->get('date')],
+                ['pk_fk_user_id', Auth::id()],
                 [$type, '!=', null]
             ]);
 
@@ -103,7 +104,7 @@ class AlgorithmController extends Controller
 
         $persons = DB::table('users')
             ->where('pk_user_id', Auth::id())
-            ->value('firstName');
+            ->value('persons');
 
         $preferences = [];
 
@@ -114,7 +115,21 @@ class AlgorithmController extends Controller
         return response()->json($preferences);
     }
 
-    public function changeUserPreferences()
+    public function changeUserPreferences(Request $request)
     {
+        DB::table('user_diets')->where('pk_fk_d_user_id', Auth::id())->delete();
+        DB::table('nogos')->where('fk_n_user_id', Auth::id())->delete();
+        DB::table('user_days')->where('pk_fk_user_id', Auth::id())->delete();
+        DB::table('users')->where('pk_user_id', Auth::id())->update(['persons' => null]);
+
+        $Algorithm = new Algorithm(
+            $request->get('plan'),
+            $request->get('allergens'),
+            $request->get('categories'),
+            $request->get('diets'),
+            $request->get('persons')
+        );
+
+        $Algorithm->saveUserPreferences();
     }
 }
