@@ -28,15 +28,24 @@ class MenuController extends Controller
 
         $select = DB::table('plans')
             ->where('pk_fk_user_id', '=', Auth::id())
-            ->where('pk_date', '=', $date)->first();
+            ->where('pk_date', '=', $date)
+            ->get([
+                'weekday',
+                'breakfast',
+                'lunch',
+                'main_dish',
+                'snack'
+            ]);
 
-        if ($select !== []) {
-            $dayPlan[$select->weekday]['breakfast'] = (new Recipe(Api::Recipe($select->breakfast)))();
-            $dayPlan[$select->weekday]['lunch'] = (new Recipe(Api::Recipe($select->lunch)))();
-            $dayPlan[$select->weekday]['main_dish'] = (new Recipe(Api::Recipe($select->main_dish)))();
-            $dayPlan[$select->weekday]['snack'] = (new Recipe(Api::Recipe($select->snack)))();
+        if ($select->isEmpty()) {
+            return response()->json([404 => 'Day not generated yet'], 404);
         }
 
-        return response()->json($dayPlan);
+        foreach (['breakfast', 'lunch', 'main_dish', 'snack'] as $type) {
+            if (isset($select[0]->$type)) {
+                $dayPlan[$type === 'main_dish' ? 'main dish' : $type] = (new Recipe(Api::Recipe($select[0]->$type), true))();
+            }
+
+        }return response()->json($dayPlan);
     }
 }

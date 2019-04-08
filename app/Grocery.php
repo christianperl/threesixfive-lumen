@@ -13,14 +13,14 @@ class Grocery extends Model
      * @var array
      */
     protected $fillable = [
-        'name', 'fk_user_id', 'serving', 'measurement', 'checked', 'generated',
+        'name', 'fk_user_id', 'serving', 'measurement', 'checked', 'generated', 'day'
     ];
     
     protected $hidden = [
         'created_at', 'updated_at'
     ];
     
-    protected $primaryKey = 'pk_groceries_id';
+    protected $primaryKey = 'pk_grocery_id';
     
     public function user() {
         return $this->belongsTo('App\User');

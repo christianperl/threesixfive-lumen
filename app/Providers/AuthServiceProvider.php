@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Predis\Client;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -32,7 +33,13 @@ class AuthServiceProvider extends ServiceProvider
 
         $this->app['auth']->viaRequest('api', function ($request) {
             if ($token = $request->header('Authentication')) {
-                return User::where('api_token', '=', $token)->first();
+                $redis = new Client();
+                if ($redis->exists($token)) {
+                    $redis->expire($token, 60 * 60 * 2);
+                    return User::where('pk_user_id', '=', (int)$redis->get($token))->first();
+                }
+
+                return null;
             }
         });
     }

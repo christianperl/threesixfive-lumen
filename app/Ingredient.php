@@ -4,33 +4,71 @@ namespace App;
 
 
 use App\Services\Api;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class Ingredient
 {
+    // Ingredient ID
     private $id;
 
+    // Serving identifier
+    private $serving_id;
+
+    // Ingredient name
     private $name;
 
+    // Ingredient sub categories
     private $sub_categories;
 
+    // Nutrient values for each ingredient
     private $servings;
 
+    // The unit of measure of this ingredient used in the recipe
     private $measurement;
 
+    //  The unit of measure of this ingredient used in the recipe for the grocery list
+    private $grocery_measurement;
+
+    // The number of units of this ingredient used in the recipe
     private $units;
 
-    public function __construct($ingredient)
+    // The number of units of this ingredient used in the recipe for the grocery list
+    private $grocery_unit;
+
+    public function __construct($ingredient, $number_of_servings)
     {
         $this->id = $ingredient['food_id'];
+        $this->serving_id = $ingredient['serving_id'];
         $this->name = $ingredient['food_name'];
+        $this->sub_categories = [];
+        $persons = DB::table('users')
+            ->where('pk_user_id', Auth::id())
+            ->value('persons');
+        $this->grocery_unit = (double)($ingredient['number_of_units'] / $number_of_servings) * $persons;
+        $this->grocery_measurement = $ingredient['measurement_description'];
+
+        // Just now
         $this->units = $ingredient['number_of_units'];
         $this->measurement = $ingredient['measurement_description'];
 
         $fat = Api::Ingredient($this->id);
 
-        $this->sub_categories = (isset($fat['food_sub_categories'])) ? (count($fat['food_sub_categories']) > 1 ? $fat['food_sub_categories']['food_sub_category'] : [$fat['food_sub_categories']['food_sub_category']]) : [];
+        if (isset($fat['food_sub_categories'])) {
+            $this->sub_categories = count($fat['food_sub_categories']) > 1 ? $fat['food_sub_categories']['food_sub_category'] : [$fat['food_sub_categories']['food_sub_category']];
+        }
 
-        $this->servings = isset(($serv = $fat['servings']['serving'])['serving_id']) ? [$serv] : $serv;
+        $this->servings = isset(($serving = $fat['servings']['serving'])['serving_id']) ? [$serving] : $serving;
+
+        if (in_array($ingredient['measurement_description'], ['large', 'medium', 'small', 'serving', 'g', 'ml', 'l', 'clove'])) {
+            if ($ingredient['measurement_description'] === 'serving') {
+
+            } else {
+                $this->units = (double)($ingredient['number_of_units'] / $number_of_servings) * $persons;
+            }
+        } else {
+
+        }
     }
 
     public function __invoke()
@@ -45,18 +83,27 @@ class Ingredient
     }
 
     /**
-     * @param $measurement
-     * @return double (grams)
+     * @return mixed
      */
-    public function getGrams($measurement)
+    public function getServingId()
     {
-        foreach ($this->servings as $serving) {
-            if ($serving['measurement_description'] === $measurement) {
-                return $serving['metric_serving_amount'];
-            }
-        }
+        return $this->serving_id;
+    }
 
-        return $this->units;
+    /**
+     * @return mixed
+     */
+    public function getGroceryMeasurement()
+    {
+        return $this->grocery_measurement;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getGroceryUnit()
+    {
+        return $this->grocery_unit;
     }
 
     public function hasSubCategory($category)

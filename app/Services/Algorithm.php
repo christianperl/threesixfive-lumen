@@ -7,13 +7,13 @@ use App\Category;
 use App\Diet;
 use App\Nogo;
 use App\Recipe;
+use App\User;
 use App\UserDay;
 use App\UserDiet;
 use Carbon\Carbon;
 use App\Plan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use phpDocumentor\Reflection\Types\Array_;
 
 class Algorithm
 {
@@ -22,8 +22,9 @@ class Algorithm
     private $allergens;
     private $categories;
     private $plan;
+    private $persons;
 
-    public function __construct($plan = null, $allergens = null, $categories = null, $diets = null)
+    public function __construct($plan = null, $allergens = null, $categories = null, $diets = null, $persons = null)
     {
         if ($allergens === null) {
             $allergens = DB::table('allergens')
@@ -73,6 +74,14 @@ class Algorithm
             $this->diets = $diets;
         }
 
+        if ($persons === null) {
+            $this->persons = DB::table('users')
+                ->where('pk_user_id', Auth::id())
+                ->value('persons');
+        } else {
+            $this->persons = $persons;
+        }
+
         if ($plan === null) {
             $select = DB::table('user_days')
                 ->where('pk_fk_user_id', Auth::id())
@@ -119,14 +128,21 @@ class Algorithm
     public function generateWeek()
     {
         $weekPlan = null;
-        $visitedPages = [];
-        $possibleRecipes = [];
 
         foreach ($this->recipe_types as $type => $type_info) {
+            $visitedPages = [];
+            $possibleRecipes = [];
+            $usePossible = false;
+
             for ($i = 0, $num = 0, $new_page = true, $days = count($type_info['days']); $i < $days; $i++, $num++) {
                 if ($new_page) {
+                    if (count($visitedPages) === (int)($type_info['totalResults'] / 50)) {
+                        $usePossible = true;
+                        break;
+                    }
+
                     do {
-                        $current_page = random_int(1, (int)$type_info['totalResults'] / 50);
+                        $current_page = random_int(1, (int)($type_info['totalResults'] / 50));
                     } while (in_array($current_page, $visitedPages, true));
 
                     $recipes = Api::Search($current_page, 50, $type)['recipe'];
@@ -138,16 +154,62 @@ class Algorithm
                 if ($i === count($recipes) - 1) {
                     $new_page = true;
                 } elseif ($recipe = $this->checkRecipe((int)$recipes[$numbers[$i]]['recipe_id'], $this->allergens, $this->categories, $this->diets)) {
-                    $weekPlan[$type_info['days'][$i]][$type] = $recipe();
+                    if ($this->checkHistory($recipe->getId())) {
+                        $weekPlan[$type_info['days'][$i]][$type] = $recipe();
+                    } else {
+                        $possibleRecipes[] = $recipe;
+                    }
                 } else {
                     $i--;
                 }
 
                 sleep(0.75);
             }
+
+            /*if ($usePossible) {
+                shuffle($possibleRecipes);
+                foreach ($possibleRecipes as $possibleRecipe) {
+
+                }
+            }*/
         }
 
         return $weekPlan;
+    }
+
+    public function generateOneType($type)
+    {
+        $result = null;
+        $visitedPages = [];
+        $possibleRecipes = [];
+        $totalResults = $this->recipe_types[$type]['totalResults'];
+
+        for ($i = 0, $new_page = true; $i < $totalResults; $i++) {
+            if ($new_page) {
+                do {
+                    $current_page = random_int(1, (int)($totalResults / 50));
+                } while (in_array($current_page, $visitedPages, true));
+
+                $recipes = Api::Search($current_page, 50, $type)['recipe'];
+                $numbers = range(0, count($recipes) - 1);
+                shuffle($numbers);
+                $new_page = false;
+            }
+
+            if ($i === count($recipes) - 1) {
+                $new_page = true;
+                $i = 0;
+            } elseif ($recipe = $this->checkRecipe((int)$recipes[$numbers[$i]]['recipe_id'], $this->allergens, $this->categories, $this->diets)) {
+                $result = $recipe->getId();
+                break;
+            } else {
+                $i--;
+            }
+
+            sleep(0.75);
+        }
+
+        return $result;
     }
 
     public function saveWeek($weekPlan, $year, $weekNumber)
@@ -208,6 +270,10 @@ class Algorithm
 
     public function saveUserPreferences()
     {
+        // Persons
+        $user = User::findOrFail(Auth::id());
+        $user->update(['persons' => $this->persons]);
+
         // Diets
         foreach ($this->diets as $diet) {
             $diet_id = Diet::where('description', $diet)->value('pk_diet_id');
@@ -285,20 +351,27 @@ class Algorithm
 
     public function checkHistory($recipe_id)
     {
+        $ids = [];
         $today = Carbon::today()->format('Y-m-d');
         $pastWeek = Carbon::today()->subWeek()->format('Y-m-d');
 
         $select = DB::table('plans')
             ->where('pk_fk_user_id', '=', Auth::id())
-            ->where('pk_date', '>=', $today)
-            ->where('pk_date', '<=', $pastWeek)->get();
+            ->where('pk_date', '<=', $today)
+            ->where('pk_date', '>=', $pastWeek)
+            ->get([
+                'breakfast',
+                'lunch',
+                'main_dish',
+                'snack'
+            ]);
 
         foreach ($select as $item) {
-            if ($item->beakfast === $recipe_id | $item->lunch === $recipe_id | $item->main_dish === $recipe_id | $item->snack === $recipe_id) {
-                return false;
+            foreach (['breakfast', 'lunch', 'main_dish', 'snack'] as $type) {
+                $ids[] = $item->$type;
             }
         }
 
-        return true;
+        return response()->json(in_array($recipe_id, $ids, true));
     }
 }

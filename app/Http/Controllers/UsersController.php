@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Plan;
 use App\User;
+use App\UserDay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Predis\Client;
 
 class UsersController extends Controller
 {
@@ -38,6 +41,14 @@ class UsersController extends Controller
 
         if (($user = User::where('email', '=', $data['email'])->first()) != []) {
             if (password_verify($data['password'], User::where('email', '=', $data['email'])->value('password'))) {
+                $user['auth-token'] = Str::random(60);
+                $redis = new Client();
+                $redis->setex($user['auth-token'], 60 * 60 * 2, $user['pk_user_id']);
+
+                if (UserDay::where('pk_fk_user_id', User::where('email', '=', $data['email'])->value('pk_user_id'))->get()->isEmpty()) {
+                    $user['init-reg'] = true;
+                }
+
                 return response()->json($user);
             } else {
                 return response()->json(['Incorrect password' => 406], 406);
@@ -51,10 +62,19 @@ class UsersController extends Controller
     {
         $this->validate($request, [
             'email' => 'required|email'
-
         ]);
 
         $data = $request->only('email');
+
+        $redis = new Client();
+
+        if ($request->get('email') === User::where('pk_user_id', $redis->get($request->header('Authentication')))) {
+            $redis->del($request->header('Authentication'));
+
+            return response()->json([200 => 'Logout successful'], 200);
+        }
+
+        return response()->json([406 => 'User information incorrect'], 406);
     }
 
     public function create(Request $request)
@@ -71,7 +91,6 @@ class UsersController extends Controller
             $input = $request->all();
 
             $input['password'] = password_hash($input['password'], PASSWORD_ARGON2I);
-            $input['api_token'] = Str::random(60);
 
             $user = User::create($input);
             return response()->json($user, 201);
